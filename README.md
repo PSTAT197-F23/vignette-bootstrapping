@@ -1,6 +1,6 @@
 # Final-Project
 
-*Contributors: Sarah Liang, Sharanya Sharma, Dannah Golich, Jason*
+*Contributors: Sarah Liang, Sharanya Sharma, Dannah Golich, Jason Siu*
 
 This is a template repository for a group assignment to produce a descriptive analysis of class survey data.
 
