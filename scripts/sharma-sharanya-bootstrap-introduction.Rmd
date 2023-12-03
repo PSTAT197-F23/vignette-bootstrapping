@@ -1,5 +1,5 @@
 ---
-title: "sharanya-sharma"
+title: "Bootstrap Introduction"
 author: "Sharanya Sharma"
 date: "2023-12-02"
 output: html_document
@@ -17,11 +17,10 @@ In an ideal scenario, statisticians will have an adequate amount of data that ca
 
 ```{r}
 library(imager)
-bootstrap_diagram <- load.image("/Users/sharanya/Desktop/bootstrap-diagram.png")
+bootstrap_diagram <- load.image("/Users/sharanya/Documents/GitHub/vignette-bootstrapping/images/bootstrap-diagram.png")
 plot(bootstrap_diagram, axes=FALSE)
 
 ```
-
 In the above example, the dataset only has 3 observations, thus bootstrapping should be used to create a sufficient amount of data for regression. The total dataset of 3 observations is sampled 3 times without replacement to acquire the first bootstrap sample. This process is repeated "B" times to acquire B total bootstrap samples. Each sample is then fit to a statistical model, resulting in B number of models: $\hat{f}^{*1}... \hat{f}^{*B}$. The mini models are then aggregated to form one model. This bootstrap aggregating method is known as Bagging.
 
 
