@@ -8,8 +8,10 @@ Vignette abstract: a brief description in a few sentences of your vignette topic
 
 Repository contents: an explanation of the directory structure of the repository
 
+
+
 ## References
-Biswal, A. (2023, Aug 10). Bagging in Machine Learning: Step to Perform And Its Advantages. Retrieved from [https://www.simplilearn.com/tutorials/machine-learning-tutorial/bagging-in-machine-learning](https://www.simplilearn.com/tutorials/machine-learning-tutorial/bagging-in-machine-learning)\
+Biswal, A. (2023, Aug 10). Bagging in Machine Learning: Step to Perform And Its Advantages. Retrieved from [https://www.simplilearn.com/tutorials/machine-learning-tutorial/bagging-in-machine-learning](https://www.simplilearn.com/tutorials/machine-learning-tutorial/bagging-in-machine-learning)
 
 What is Bootstrapping?. (n.d.). Retrieved from [https://www.mastersindatascience.org/learning/machine-learning-algorithms/bootstrapping/](https://www.mastersindatascience.org/learning/machine-learning-algorithms/bootstrapping/)
 
