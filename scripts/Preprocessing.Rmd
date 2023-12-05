@@ -1,0 +1,33 @@
+```{r}
+data <- read.csv('../data/courseGrades.csv')
+
+# if u are working in rscript:
+# data <- read.csv('data/courseGrades.csv')
+
+```
+
+count data of letter grade is excluded, you can add it back if you think its necessary
+```{r}
+library(tidyverse)
+processed_data <- data %>% 
+  filter(nLetterStudents != 0) %>% 
+  select(course, instructor, quarter, year, nLetterStudents, dept, avgGPA) %>%
+  mutate(course = str_replace_all(course, "\\s+", " "))
+
+```
+
+example filtering: 
+Stat classes in the last 5 years excluding summer quarters
+PSTAT 171 in the past 10 years
+```{r}
+stat_classes <- processed_data %>% 
+  filter(!(quarter == "summer") & dept == "PSTAT" & between(year, 2017, 2022))
+
+head(stat_classes)
+
+pstat171_data <- processed_data %>% 
+  filter(course == "PSTAT 174" & between(year, 2012, 2022))
+head(pstat171_data)
+
+```
+

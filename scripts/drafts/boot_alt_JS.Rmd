@@ -1,0 +1,19 @@
+
+###Ensemble learning: Gradient Boosting
+Boosting is the upgraded version of bagging(bootstrap aggregation). Rather than training several models from scratch and aggregating the results, each new model is trained based on error from the previous model. In other words, new models introduced is in turned trained by learning the mistakes of previous models. All models are then aggregated to form the final result. 
+
+A popular algortihm that uses this technique is XGBOOST:
+
+```{r}
+#lol 
+```
+
+
+##Connection to deep learning
+Like the name suggest, gradient boosting is analogous to gradient descent central to deep learning algorithms. Where as gradient descent tries to minimize the loss function by adjusting its parameters, gradient boosting minimize loss function by adding new models.
+
+
+
+
+
+
