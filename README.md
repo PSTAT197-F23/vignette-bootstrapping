@@ -13,6 +13,8 @@ Repository contents: an explanation of the directory structure of the repository
 ## References
 Biswal, A. (2023, Aug 10). Bagging in Machine Learning: Step to Perform And Its Advantages. Retrieved from [https://www.simplilearn.com/tutorials/machine-learning-tutorial/bagging-in-machine-learning](https://www.simplilearn.com/tutorials/machine-learning-tutorial/bagging-in-machine-learning)
 
+Random Forests. (n.d.). _AFIT Data Science Lab R Programming Guide_. Retrieved from [https://afit-r.github.io/random_forests#basic](https://afit-r.github.io/random_forests#basic)
+
 What is Bootstrapping?. (n.d.). Retrieved from [https://www.mastersindatascience.org/learning/machine-learning-algorithms/bootstrapping/](https://www.mastersindatascience.org/learning/machine-learning-algorithms/bootstrapping/)
 
 

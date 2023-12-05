@@ -1,0 +1,176 @@
+---
+title: "random-forest"
+format: html
+editor: visual
+---
+
+__Objectives:__ Understand how bootstrapping works on smaller and larger data sets; Understand what bagging requires of the parameters of a random forest model; Understand the effect of bootstrapping and bagging on tree models (e.g. random forest)
+
+
+Bagging, or bootstrap aggregating, regression trees increases prediction power of single tree models with high variance and poor prediction.$^1$ However, bagging regression trees suffer from tree correlation. We can solve this issue be using random forests, which are a modification of bagging that implements a larger set of de-correlated trees.
+
+
+
+```{r warning=FALSE, message=FALSE}
+## load necessary packages
+library(dplyr)
+#install.packages("randomForest")
+library(randomForest)
+# install.packages("tree")
+library(gbm)
+library(ISLR)
+library(tree)
+```
+
+
+Let's examine how bootstrapping and bagging can improve classification by implementing a random forest model on bootstrapped and bagged data.
+
+
+## Setup
+
+We will use the built in R data set `Carseats` before experimenting on a larger data set.
+
+The `Carseats` data set is a simulated data set containing sales of child car seats at 400 different stores.$^2$ We will use `High` (coerced from `Sales`) as our response variable for a basic classification problem.
+
+The following two code chunks sets up the classification problem for which we will perform bootstrapping and bagging and implementing random forest models on.
+
+```{r warning=FALSE, message=FALSE}
+# load Carseats data
+attach(Carseats)
+
+# coerce Sales variable into categorical binary classification response High
+Carseats <- Carseats %>%
+  mutate(High=as.factor(ifelse(Sales <= median(Sales), "No", "Yes"))) %>%
+  select(-Sales)
+
+head(Carseats)
+```
+
+```{r warning=FALSE, message=FALSE}
+# sample 75% observations as training data
+set.seed(3)
+train <- sample(nrow(Carseats), 0.75*nrow(Carseats))
+train.carseats <- Carseats[train,]
+
+# remaining 25% as testing data
+test.carseats <- Carseats[-train,]
+
+dim(train.carseats)
+dim(test.carseats)
+```
+_Check the dimensions of your training and testing split before continuing._
+
+
+## Bagged Random Forest Model
+
+### Parameter Tuning
+Notice how we have 11 variables, one of which is our response variable `High`. If $p$ is our number of predictors, in this case $p=10$.
+
+Let's begin by training a random forest model on bootstrapped and bagged data.
+
+When implementing a random forest model on bagged data, we need to set $m=p$ where $p$ is number of predictors. So, $m=10$, i.e. `mtry=10`. By setting `importance=TRUE`, we will assess independent variable importance in bagged trees.
+
+```{r warning=FALSE, message=FALSE}
+# build a bootstrapped + bagged random forest model
+# bagging is random forest with m = p
+bag.carseats <- randomForest(High ~ ., data=train.carseats,
+                            mtry=10, importance=TRUE)
+bag.carseats
+```
+Plot the errors each classification category achieves.
+
+```{r warning=FALSE, message=FALSE}
+# plot the errors
+plot(bag.carseats)
+legend("top", colnames(bag.carseats$err.rate),col=1:4,cex=0.8,fill=1:4)
+```
+
+Notice how the error decreases as the number of trees increases, i.e. as our random forest model is further trained. Also take note of the OOB performance.
+
+### Test Set Error
+
+Let's predict on testing data and retrieve a test set error rate for our bagged random forest model. Note that we use `type= response` which classifies based on exact class, "Yes" or "No".
+
+```{r warning=FALSE, message=FALSE}
+# predict on testing split based on exact class
+yhat.bag <- predict(bag.carseats, newdata = test.carseats, type = "response")
+
+# retrieve mean test set error
+test.bag.err <- mean(yhat.bag != test.carseats$High)
+test.bag.err
+```
+
+If we want to obtain predicted probabilities, we can set `type = prob`, which will classify based on probability for either class. We can also set the number of trees `ntree` to 700 and retrieve the test set error.
+
+```{r warning=FALSE, message=FALSE}
+# probability predictions on testing split
+prob.bag <- predict(bag.carseats, newdata = test.carseats, type = "prob")
+head(prob.bag)
+
+
+# bagged random forest with 700 trees
+bag.carseats2 <- randomForest(High ~ .,
+                            data=train.carseats,
+                            mtry=10, ntree=700, importance=TRUE)
+
+# predict on testing split using model with 700 trees
+yhat.bag2 <- predict(bag.carseats2, newdata = test.carseats)
+
+# retrieve mean test set error
+test.bag.err2 <- mean(yhat.bag2 != test.carseats$High)
+test.bag.err2
+```
+
+__Does the number of trees affect the test set error performance of bagged random forest model? Why or why not?__
+
+
+## Unbagged Random Forest
+
+Now let's implement a random forest model on the original training data (no bagging) and retrieve a test set error to compare to our previous result.
+
+### Parameter Tuning
+If we want a random forest model with no bagging, then we have to use $m<p$. Let's set $m=3$.
+```{r warning=FALSE, message=FALSE}
+# build a random forest model for classification problem
+# use a m smaller than 10
+# mtry = 3 (number of variables randomly sampled as candidates at each split)
+rf.carseats = randomForest(High ~ ., data=train.carseats,
+                           mtry=3, importance=TRUE)
+rf.carseats
+```
+
+```{r warning=FALSE, message=FALSE}
+plot(rf.carseats)
+```
+
+### Test Set Error Comparison
+
+```{r warning=FALSE, message=FALSE}
+# obtain predictions on testing data
+yhat.rf = predict(rf.carseats, newdata = test.carseats)
+
+# obtain error
+test.rf.err = mean(yhat.rf != test.carseats$High)
+test.rf.err
+```
+
+```{r warning=FALSE, message=FALSE}
+# compare test set errors between random forest vs. bootstrapped + bagged random forest
+test.bag.err2
+test.rf.err
+```
+
+Our random forest model achieved a test set error of 0.2. Compare this value to the test set error of our model on bootstrapped and bagged data.
+
+__Does the random forest model provide any improvement over bootstrapping and bagging?__
+
+
+
+
+
+
+$^1$ Random Forests. (n.d.). _AFIT Data Science Lab R Programming Guide_. Retrieved from [https://afit-r.github.io/random_forests#basic](https://afit-r.github.io/random_forests#basic)
+
+
+
+$^2$ [https://rdrr.io/cran/ISLR/man/Carseats.html](https://rdrr.io/cran/ISLR/man/Carseats.html)
