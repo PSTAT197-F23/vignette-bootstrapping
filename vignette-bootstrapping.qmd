@@ -36,8 +36,6 @@ We will use `courseGrades` data set. This data set includes the number of studen
 
 We choose `avgGPA` as our response variable. 
 
-_Note that random forests cannot predict or extrapolate for regression problems._$^3$ _Will change to categorical response later._
-
 ```{r warning=FALSE, message=FALSE}
 # load course grades data set
 grade.raw <- read_csv('data/courseGrades.csv')
@@ -110,8 +108,8 @@ Let's predict on testing data and retrieve a test set error rate for our bagged 
 # predict on testing split based on exact class
 yhat.bag <- predict(bag.pstat, newdata = test, type = "response")
 
-# retrieve mean test set error
-test.bag.err <- mean(yhat.bag - test$avgGPA)
+# retrieve test set MSE
+test.bag.err <- mean((test$avgGPA- yhat.bag)^2)
 test.bag.err
 ```
 
@@ -128,9 +126,9 @@ bag.pstat2 <- randomForest(avgGPA ~ .,
                             data=train,
                             mtry=5, ntree=700, importance=TRUE)
 
-# retrieve test set error
+# retrieve test set MSE
 yhat.bag2 <- predict(bag.pstat2, newdata = test)
-test.bag.err2 <- mean(yhat.bag - test$avgGPA)
+test.bag.err2 <- mean((test$avgGPA-yhat.bag)^2)
 test.bag.err2
 ```
 
@@ -156,14 +154,14 @@ rf.pstat
 plot(rf.pstat)
 ```
 
-### Test Set Error Comparison
+### Test Set MSE Comparison
 
 ```{r warning=FALSE, message=FALSE}
 # obtain predictions on testing data
 yhat.rf = predict(rf.pstat, newdata = test)
 
-# obtain error
-test.rf.err = mean(yhat.rf - test$avgGPA)
+# obtain MSE
+test.rf.err = mean((test$avgGPA - yhat.rf)^2)
 ```
 
 ```{r warning=FALSE, message=FALSE}
@@ -172,13 +170,16 @@ test.bag.err
 test.rf.err
 ```
 
-Our random forest model achieved a test set error of 0.0648. Compare this value to the test set error of our model with bagging.
+Our random forest model achieved a test set MSE of .1509. Compare this value to the test set MSE of our model with bagging.
 
 __Does the random forest model provide any improvement over bootstrapping and bagging?__
 
 
+## Finishing Thoughts
 
+The random forest model with bagging certainly achieves a better prediction power. However, for a regression problem like this one, if we wanted to predict trends and create a more powerful predictive model, then we cannot use random forests. Random forests are unable to extrapolate and predict values outside of the trends present in the data given. $^3$
 
+One way of combating this may be to turn this into a classification problem. You may also consider other more applicable models if you wish to truly extrapolate predictions and discover trends outside of what is present in the data set. 
 
 
 $^1$ Random Forests. (n.d.). _AFIT Data Science Lab R Programming Guide_. Retrieved from [https://afit-r.github.io/random_forests#basic](https://afit-r.github.io/random_forests#basic)
