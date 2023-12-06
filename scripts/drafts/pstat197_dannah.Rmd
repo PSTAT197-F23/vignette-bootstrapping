@@ -1,0 +1,224 @@
+---
+title: "Untitled"
+author: "Dannah Golich"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+The general purpose of bootstrapping is to compute statistics from samples of an estimate of a population (which is the larger sample). From this, we can estimate statistic sampling distributions to assess the variability of a statistic in samples. We can assess the accuracy of our estimate, like a sample mean. Bootstrapping also requires relatively few assumptions. The main assumption with bootstrapping is that the sample used represents the true population.
+
+
+```{r}
+library(tidyverse)
+library(tidymodels)
+library(xgboost)
+library(ggplot2)
+```
+
+```{r}
+course_grades <- read.csv("/Users/dannahgolich/Downloads/courseGrades.csv", header=TRUE)
+head(course_grades)
+```
+
+For the best accuracy, it is important to determine the appropriate number of resamples. Resampling 1000 times can provide rough approximations, but 10,000 improves accuracy. As such, in performing a bootstrap, one has to consider the computational costs vs the accuracy one is hoping to achieve.
+```{r}
+# from jason
+processed_data <- course_grades %>% 
+  filter(nLetterStudents != 0) %>% 
+  select(course, instructor, quarter, year, nLetterStudents, dept, avgGPA) %>%
+  mutate(course = str_replace_all(course, "\\s+", " "))
+```
+
+```{r}
+# from jason
+data <- processed_data %>% 
+  filter(dept == "PSTAT" & between(year, 2022, 2022))
+  #filter(dept=='PSTAT')
+head(data)
+
+data_summer <- data %>% filter(quarter == "Summer") 
+data_not_summer <- data %>% filter (!(quarter == "Summer"))
+
+ggplot(data_not_summer, aes(x = avgGPA)) +
+  geom_histogram(binwidth = 0.1, fill = "blue", color = "black", alpha = 0.7) +
+  ggtitle("Histogram of avgGPA") +
+  xlab("Average GPA") +
+  ylab("Count")
+```
+
+The histogram above displays the distribution of GPAs of the classes from Fall 2009 to Spring 2023 without the inclusion of Summer classes. 
+```{r}
+ggplot(data_summer, aes(x = avgGPA)) +
+  geom_histogram(binwidth = 0.1, fill = "blue", color = "black", alpha = 0.7) +
+  ggtitle("Histogram of avgGPA") +
+  xlab("Average GPA") +
+  ylab("Count")
+```
+The histogram above displays the distribution of GPAs of Summer classes fromn 2009 to 2023.
+
+As we can see, the data does not follow a normal distribution, which makes bootstrapping useful in this case.
+```{r}
+# from jason
+print(t.test(data_summer$avgGPA)$conf.int)
+print(t.test(data_not_summer$avgGPA)$conf.int)
+```
+```{r}
+print(paste("Sample mean of data_summer:", mean(data_summer$avgGPA)))
+print(paste("Sample mean of data_not_summer:", mean(data_not_summer$avgGPA)))
+```
+We can use bootstrapping in order to assess the accuracy of the means we calculated from each sample subset.
+
+```{r}
+# from jason
+calculate_mean <- function(x) {
+  return(mean(x, na.rm = TRUE))
+}
+
+# Function for bootstrap resampling
+bootstrap_resample <- function(data, fun, B = 1000) {
+  n <- length(data)
+  resampled_means <- numeric(B)
+
+  for (i in 1:B) {
+    resample <- sample(data, size = n, replace = TRUE)
+    resampled_means[i] <- fun(resample)
+  }
+
+  return(resampled_means)
+}
+```
+
+```{r}
+# from jason
+# Extract vectors from the data frame
+v1 <- data_summer$avgGPA
+v2 <- data_not_summer$avgGPA
+
+# Number of bootstrap samples
+B <- 1000
+
+# Bootstrap resampling for vector 1
+bootstrap_means_v1 <- bootstrap_resample(v1, calculate_mean, B)
+
+# Bootstrap resampling for vector 2
+bootstrap_means_v2 <- bootstrap_resample(v2, calculate_mean, B)
+
+# Calculate confidence intervals
+confidence_interval_v1 <- quantile(bootstrap_means_v1, c(0.025, 0.975))
+confidence_interval_v2 <- quantile(bootstrap_means_v2, c(0.025, 0.975))
+
+# Print the results
+print("Confidence Interval for Vector 1:")
+print(confidence_interval_v1)
+
+print("Confidence Interval for Vector 2:")
+print(confidence_interval_v2)
+```
+
+First, we perform bootstrapping with 1000 bootstrap samples for analysis of the distribution of the sample mean. Below are histograms for the bootstrapped means of class GPAs for the standard school year and summer classes.
+
+```{r}
+hist(bootstrap_means_v2, col = "blue", border = "black",
+     main = "Histogram of Bootstrapped Mean GPAs Fall-Spring 2009-2023",
+     xlab = "Average GPA")
+```
+The mean GPA for classes during the standard school year is centered at about 3.38.
+```{r}
+hist(bootstrap_means_v1, col = "blue", border = "black",
+     main = "Histogram of Bootstrapped Mean GPAs Summer 2009-2023",
+     xlab = "Average GPA")
+```
+The mean GPA for classes during the standard school year is centered at about 3.15.
+
+Increasing the number of bootstrap samples can increase the accuracy of the sampling distribution and reduce Monte Carlo error. We will perfrom the same bootstrap process with 10,000 samples.
+```{r}
+# Number of bootstrap samples
+B <- 10000
+
+# Bootstrap resampling for vector 1
+bootstrap_means_v1_2 <- bootstrap_resample(v1, calculate_mean, B)
+
+# Bootstrap resampling for vector 2
+bootstrap_means_v2_2 <- bootstrap_resample(v2, calculate_mean, B)
+```
+
+```{r}
+hist(bootstrap_means_v2_2, col = "blue", border = "black",
+     main = "Histogram of Bootstrapped Mean GPAs Fall-Spring 2009-2023",
+     xlab = "Average GPA")
+```
+
+```{r}
+hist(bootstrap_means_v1_2, col = "blue", border = "black",
+     main = "Histogram of Bootstrapped Mean GPAs Summer 2009-2023",
+     xlab = "Average GPA")
+```
+
+Increasing the number of bootstrap samples gives us more clarity on the sample mean distribution in this case.
+
+T-test bootstrapping:
+
+When the sample size is small, you may be inclined to use a t interval or attempt a bootstrap confidence interval. However, since the bootstrap interval may be too narrow, using a bootstrap t interval will increase the accuracy of an interval.
+
+We will look at a subset of our data, PSTAT 171 data, for a sample with small n.
+
+```{r}
+stat_classes <- processed_data %>% 
+  filter(!(quarter == "summer") & dept == "PSTAT" & between(year, 2017, 2022))
+
+head(stat_classes)
+
+pstat171_data <- processed_data %>% 
+  filter(course == "PSTAT 171" & between(year, 2012, 2022))
+head(pstat171_data)
+```
+```{r}
+# bootstrap CI as shown in above code
+pstat171_gpa <- pstat171_data$avgGPA
+
+# Number of bootstrap samples
+B <- 10000
+
+# Bootstrap resampling for vector 1
+bootstrap_means_pstat171 <- bootstrap_resample(pstat171_gpa, calculate_mean, B)
+
+# Calculate confidence intervals
+confidence_interval_pstat171 <- quantile(bootstrap_means_pstat171, c(0.025, 0.975))
+
+# Print the results
+print("Confidence Interval for PSTAT 171:")
+print(confidence_interval_pstat171)
+```
+
+To begin the process of the bootstrap t interval, we will first center the data so the mean is 0.
+```{r}
+scaled_pstat171_data <- scale(pstat171_data$avgGPA, scale = FALSE)
+```
+
+```{r}
+# t value computation
+calculate_t <- function(x) {
+  return(qt(0.01, 5, lower.tail=TRUE))
+}
+```
+
+```{r}
+
+# Number of bootstrap samples
+B <- 10000
+
+# Bootstrap resampling for vector 1
+bootstrap_t_pstat171 <- bootstrap_resample(scaled_pstat171_data, calculate_t, B)
+
+# Calculate confidence intervals
+t_interval_pstat171 <- quantile(bootstrap_t_pstat171, c(0.025, 0.975))
+
+# Print the results
+print("Confidence Interval for PSTAT 171:")
+print(t_interval_pstat171)
+```
+
+Sources used:
+https://statisticsbyjim.com/hypothesis-testing/bootstrapping/
+Hesterberg, Tim C. “What Teachers Should Know About the Bootstrap: Resampling in the Undergraduate Statistics Curriculum.” The American Statistician, vol. 69, no. 4, 2015, pp. 371–86, https://doi.org/10.1080/00031305.2015.1089789.
+https://garstats.wordpress.com/2019/07/25/boott/
