@@ -27,7 +27,7 @@ library(rpart)
 ```
 
 
-Let's examine how bagging can improve a prediction problem by implementing a random forest model on bagged data.
+Let's examine how bagging affects a prediction problem by implementing bagging and compare to a normal random forest.
 
 
 ## Setup
@@ -77,9 +77,11 @@ _Check the dimensions of your training and testing split before continuing._
 ### Parameter Tuning
 Notice how we have 7 variables, one of which is our response variable `avgGPA`. If $p$ is our number of predictors, in this case $p=6$.
 
-Let's begin by training a random forest model on bootstrapped and bagged data.
+Let's begin by training a random forest model with bagging.
 
-When implementing a random forest model on bagged data, we need to set $m=p$ where $p$ is number of predictors. So, $m=5$, i.e. `mtry=5`. The `mtry` parameter reflects the number of variables randomly sampled as candidates at each split. By setting `importance=TRUE`, we will assess independent variable importance in bagged trees.
+__Keep in mind that bagging will lead to correlated trees, since all predictors are considered at each split.__
+
+The `mtry` parameter in `randomForest()` reflects the number of variables randomly sampled as candidates at each split. When implementing a random forest model with bagging, we need to set $m=p$ where $p$ is number of predictors. So, $m=5$, i.e. `mtry=5`. By setting `importance=TRUE`, we will assess independent variable importance in bagged trees.
 
 ```{r warning=FALSE, message=FALSE}
 # build a bagging random forest model
@@ -98,11 +100,11 @@ Plot the errors achieved.
 plot(bag.pstat)
 ```
 
-Notice how the error decreases as the number of trees increases, i.e. as our random forest model is further trained.
+_Notice how the error decreases as the number of trees increases, i.e. as our random forest model is further trained._
 
 ### Test Set Error
 
-Let's predict on testing data and retrieve a test set error rate for our bagged random forest model.
+Let's predict on testing data and retrieve a test set MSE for our bagged random forest model.
 
 ```{r warning=FALSE, message=FALSE}
 # predict on testing split based on exact class
@@ -137,10 +139,13 @@ __Does the number of trees affect the test set error performance of bagged rando
 
 ## Unbagged Random Forest
 
-Now let's implement a random forest model on the original training data (no bagging) and retrieve a test set error to compare to our previous result.
+Now let's implement a random forest model on the original training data (no bagging) and retrieve a test set MSE to compare to our previous MSE result.
 
 ### Parameter Tuning
 If we want a random forest model with no bagging, then we have to use $m<p$. Let's set $m=3$.
+
+Setting $m<p$ allows the random forest to create uncorrelated trees. Typically, this is what is preferred.
+
 ```{r warning=FALSE, message=FALSE}
 # build a random forest model for classification problem
 # use a m smaller than 5
@@ -172,12 +177,14 @@ test.rf.err
 
 Our random forest model achieved a test set MSE of .1509. Compare this value to the test set MSE of our model with bagging.
 
-__Does the random forest model provide any improvement over bootstrapping and bagging?__
+__Does the random forest model provide any improvement over bootstrapping and bagging, in this case?__
 
 
 ## Finishing Thoughts
 
-The random forest model with bagging certainly achieves a better prediction power. However, for a regression problem like this one, if we wanted to predict trends and create a more powerful predictive model, then we cannot use random forests. Random forests are unable to extrapolate and predict values outside of the trends present in the data given. $^3$
+In this case, the random forest model with bagging achieves a better prediction power. However, even if bagging achieves a lower MSE, we would wish to avoid correlation between trees (i.e. correlated predictions) which somewhat invalidates our results.
+
+Also, for a regression problem like this one, if we wanted to predict trends and create a more powerful predictive model, then we cannot use random forests. Random forests are unable to extrapolate and predict values outside of the trends present in the data given. $^3$
 
 One way of combating this may be to turn this into a classification problem. You may also consider other more regression-applicable models (regression-enhanced random forest (RERF), SVM regression, deep learning NN, etc.) if you wish to truly extrapolate predictions and discover trends outside of what is present in the data set. $^3$
 
