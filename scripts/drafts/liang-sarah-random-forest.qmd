@@ -9,8 +9,6 @@ __Objectives:__ Understand how bootstrapping works on smaller and larger data se
 
 Bagging, or bootstrap aggregating, regression trees increases prediction power of single tree models with high variance and poor prediction.$^1$ However, bagging regression trees suffer from tree correlation. We can solve this issue be using random forests, which are a modification of bagging that implements a larger set of de-correlated trees.
 
-
-
 ```{r warning=FALSE, message=FALSE}
 ## load necessary packages
 library(dplyr)
@@ -28,22 +26,20 @@ Let's examine how bootstrapping and bagging can improve classification by implem
 
 ## Setup
 
-We will use the built in R data set `Carseats` before experimenting on a larger data set.
+We will use `courseGrades` data set.
 
 The `Carseats` data set is a simulated data set containing sales of child car seats at 400 different stores.$^2$ We will use `High` (coerced from `Sales`) as our response variable for a basic classification problem.
 
 The following two code chunks sets up the classification problem for which we will perform bootstrapping and bagging and implementing random forest models on.
 
 ```{r warning=FALSE, message=FALSE}
-# load Carseats data
-attach(Carseats)
+# load course grades data set
+grade <- read_csv('data/courseGrades.csv')
 
 # coerce Sales variable into categorical binary classification response High
-Carseats <- Carseats %>%
-  mutate(High=as.factor(ifelse(Sales <= median(Sales), "No", "Yes"))) %>%
-  select(-Sales)
 
-head(Carseats)
+
+head(grade)
 ```
 
 ```{r warning=FALSE, message=FALSE}

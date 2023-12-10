@@ -68,6 +68,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="vignette-bootstrapping_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="vignette-bootstrapping_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
 
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
 </head>
 
@@ -94,26 +96,237 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 </header>
 
-<section id="quarto" class="level2">
-<h2 class="anchored" data-anchor-id="quarto">Quarto</h2>
-<p>Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <a href="https://quarto.org" class="uri">https://quarto.org</a>.</p>
+<section id="sarah---random-forest-below" class="level4">
+<h4 class="anchored" data-anchor-id="sarah---random-forest-below">Sarah - random forest below</h4>
+<p><strong>Objectives:</strong> Understand how bootstrapping works on smaller and larger data sets; Understand what bagging requires of the parameters of a random forest model; Understand the effect of bootstrapping and bagging on tree models (e.g.&nbsp;random forest)</p>
+<p>Bagging, or bootstrap aggregating, regression trees increase prediction power of single tree models that have high variance and poor prediction.<span class="math inline">\(^1\)</span> However, bagging regression trees suffer from tree correlation. We can solve this issue be using random forests, which are a modification of bagging that implements a larger set of de-correlated trees.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="do">## load necessary packages</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">#install.packages("randomForest")</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(randomForest)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># install.packages("tree")</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(gbm)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ISLR)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tree)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidymodels)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(stringr)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rpart)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let’s examine how bagging affects a prediction problem by implementing bagging and compare to a normal random forest.</p>
 </section>
-<section id="running-code" class="level2">
-<h2 class="anchored" data-anchor-id="running-code">Running Code</h2>
-<p>When you click the <strong>Render</strong> button a document will be generated that includes both content and the output of embedded code. You can embed code like this:</p>
+<section id="setup" class="level2">
+<h2 class="anchored" data-anchor-id="setup">Setup</h2>
+<p>We will use <code>courseGrades</code> data set. This data set includes the number of students receiving each letter grade from Fall 2009 to Summer 2023 at UCSB in wide form.<span class="math inline">\(^2\)</span> We preprocessed previously to extract PSTAT course data.</p>
+<p>We choose <code>avgGPA</code> as our response variable.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dv">1</span> <span class="sc">+</span> <span class="dv">1</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># load course grades data set</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>grade.raw <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">'data/courseGrades.csv'</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(grade.raw)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 2</code></pre>
+<pre><code># A tibble: 6 x 25
+   ...1 course        instructor   quarter  year     A     B     C     D     F
+  &lt;dbl&gt; &lt;chr&gt;         &lt;chr&gt;        &lt;chr&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+1     0 WRIT    501B  DEAN C W     Fall     2009     0     0     0     0     0
+2     1 WRIT    500   BROWNING R   Fall     2009     0     0     0     0     0
+3     2 WRIT    109ST BRADLEY N D  Fall     2009    19     0     0     0     2
+4     3 WRIT    109ST LUNSFORD K J Fall     2009     8     1     0     0     1
+5     4 WRIT    109SS PETRACCA M F Fall     2009    13     2     0     1     0
+6     5 WRIT    109L  EK A A       Fall     2009     1     9     0     0     0
+# i 15 more variables: nLetterStudents &lt;dbl&gt;, nPNPStudents &lt;dbl&gt;, avgGPA &lt;dbl&gt;,
+#   P &lt;dbl&gt;, dept &lt;chr&gt;, S &lt;dbl&gt;, su &lt;dbl&gt;, Ap &lt;dbl&gt;, Bp &lt;dbl&gt;, Cp &lt;dbl&gt;,
+#   Dp &lt;dbl&gt;, Am &lt;dbl&gt;, Bm &lt;dbl&gt;, Cm &lt;dbl&gt;, Dm &lt;dbl&gt;</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># preprocess</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>grade <span class="ot">&lt;-</span> grade.raw <span class="sc">%&gt;%</span> </span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(nLetterStudents <span class="sc">!=</span> <span class="dv">0</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(course, instructor, quarter, year, nLetterStudents, dept, avgGPA) <span class="sc">%&gt;%</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">course =</span> <span class="fu">str_replace_all</span>(course, <span class="st">"</span><span class="sc">\\</span><span class="st">s+"</span>, <span class="st">" "</span>))</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>pstat <span class="ot">&lt;-</span> grade <span class="sc">%&gt;%</span> </span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span>(quarter <span class="sc">==</span> <span class="st">"summer"</span>) <span class="sc">&amp;</span> dept <span class="sc">==</span> <span class="st">"PSTAT"</span> <span class="sc">&amp;</span> <span class="fu">between</span>(year, <span class="dv">2017</span>, <span class="dv">2022</span>))</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>pstat <span class="ot">&lt;-</span> pstat <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="sc">-</span>dept)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(pstat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 6 x 6
+  course     instructor   quarter  year nLetterStudents avgGPA
+  &lt;chr&gt;      &lt;chr&gt;        &lt;chr&gt;   &lt;dbl&gt;           &lt;dbl&gt;  &lt;dbl&gt;
+1 PSTAT 296B DUNCAN I     Winter   2017              18   3.98
+2 PSTAT 296B DUNCAN J E   Winter   2017              18   3.98
+3 PSTAT 296B MOLINARI R C Winter   2017              18   3.98
+4 PSTAT 296B WILDMAN M    Winter   2017              18   3.98
+5 PSTAT 274  FELDMAN R    Winter   2017              12   3.71
+6 PSTAT 231  OH SANG-YUN  Winter   2017              13   3.85</code></pre>
 </div>
 </div>
-<p>You can add options to executable code like this</p>
 <div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># sample 80% observations as training data</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">3</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>partitions <span class="ot">&lt;-</span> pstat <span class="sc">%&gt;%</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">initial_split</span>(<span class="at">prop =</span> <span class="fl">0.8</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>train <span class="ot">&lt;-</span> <span class="fu">training</span>(partitions)</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>test <span class="ot">&lt;-</span> <span class="fu">testing</span>(partitions)</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(train)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 4</code></pre>
+<pre><code>[1] 588   6</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(test)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 147   6</code></pre>
 </div>
 </div>
-<p>The <code>echo: false</code> option disables the printing of code (only output is displayed).</p>
+<p><em>Check the dimensions of your training and testing split before continuing.</em></p>
+</section>
+<section id="bagged-random-forest-model" class="level2">
+<h2 class="anchored" data-anchor-id="bagged-random-forest-model">Bagged Random Forest Model</h2>
+<section id="parameter-tuning" class="level3">
+<h3 class="anchored" data-anchor-id="parameter-tuning">Parameter Tuning</h3>
+<p>Notice how we have 7 variables, one of which is our response variable <code>avgGPA</code>. If <span class="math inline">\(p\)</span> is our number of predictors, in this case <span class="math inline">\(p=6\)</span>.</p>
+<p>Let’s begin by training a random forest model with bagging.</p>
+<p><strong>Keep in mind that bagging will lead to correlated trees, since all predictors are considered at each split.</strong></p>
+<p>The <code>mtry</code> parameter in <code>randomForest()</code> reflects the number of variables randomly sampled as candidates at each split. When implementing a random forest model with bagging, we need to set <span class="math inline">\(m=p\)</span> where <span class="math inline">\(p\)</span> is number of predictors. So, <span class="math inline">\(m=5\)</span>, i.e.&nbsp;<code>mtry=5</code>. By setting <code>importance=TRUE</code>, we will assess independent variable importance in bagged trees.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># build a bagging random forest model</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co"># bagging is random forest with m = p</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>bag.pstat <span class="ot">&lt;-</span> <span class="fu">randomForest</span>(avgGPA <span class="sc">~</span> course <span class="sc">+</span> instructor <span class="sc">+</span> quarter <span class="sc">+</span> year <span class="sc">+</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>                            nLetterStudents,</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>                          <span class="at">data =</span> train,</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>                          <span class="at">mtry=</span><span class="dv">5</span>, <span class="at">importance=</span><span class="cn">TRUE</span>, <span class="at">na.action =</span> na.omit)</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>bag.pstat</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+ randomForest(formula = avgGPA ~ course + instructor + quarter +      year + nLetterStudents, data = train, mtry = 5, importance = TRUE,      na.action = na.omit) 
+               Type of random forest: regression
+                     Number of trees: 500
+No. of variables tried at each split: 5
+
+          Mean of squared residuals: 0.08409803
+                    % Var explained: 70.62</code></pre>
+</div>
+</div>
+<p>Plot the errors achieved.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># plot the errors</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(bag.pstat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="vignette-bootstrapping_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p><em>Notice how the error decreases as the number of trees increases, i.e.&nbsp;as our random forest model is further trained.</em></p>
+</section>
+<section id="test-set-error" class="level3">
+<h3 class="anchored" data-anchor-id="test-set-error">Test Set Error</h3>
+<p>Let’s predict on testing data and retrieve a test set MSE for our bagged random forest model.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># predict on testing split based on exact class</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>yhat.bag <span class="ot">&lt;-</span> <span class="fu">predict</span>(bag.pstat, <span class="at">newdata =</span> test, <span class="at">type =</span> <span class="st">"response"</span>)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co"># retrieve test set MSE</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>test.bag.err <span class="ot">&lt;-</span> <span class="fu">mean</span>((test<span class="sc">$</span>avgGPA<span class="sc">-</span> yhat.bag)<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>test.bag.err</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.1509249</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># probability predictions on testing split</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>prob.bag <span class="ot">&lt;-</span> <span class="fu">predict</span>(bag.carseats, <span class="at">newdata =</span> test.carseats, <span class="at">type =</span> <span class="st">"prob"</span>)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(prob.bag)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Try increasing the <code>ntree</code> parameter.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># increase ntree</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>bag.pstat2 <span class="ot">&lt;-</span> <span class="fu">randomForest</span>(avgGPA <span class="sc">~</span> .,</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>                            <span class="at">data=</span>train,</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>                            <span class="at">mtry=</span><span class="dv">5</span>, <span class="at">ntree=</span><span class="dv">700</span>, <span class="at">importance=</span><span class="cn">TRUE</span>)</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="co"># retrieve test set MSE</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>yhat.bag2 <span class="ot">&lt;-</span> <span class="fu">predict</span>(bag.pstat2, <span class="at">newdata =</span> test)</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>test.bag.err2 <span class="ot">&lt;-</span> <span class="fu">mean</span>((test<span class="sc">$</span>avgGPA<span class="sc">-</span>yhat.bag)<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>test.bag.err2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.1509249</code></pre>
+</div>
+</div>
+<p><strong>Does the number of trees affect the test set error performance of bagged random forest model? Why or why not?</strong></p>
+</section>
+</section>
+<section id="unbagged-random-forest" class="level2">
+<h2 class="anchored" data-anchor-id="unbagged-random-forest">Unbagged Random Forest</h2>
+<p>Now let’s implement a random forest model on the original training data (no bagging) and retrieve a test set MSE to compare to our previous MSE result.</p>
+<section id="parameter-tuning-1" class="level3">
+<h3 class="anchored" data-anchor-id="parameter-tuning-1">Parameter Tuning</h3>
+<p>If we want a random forest model with no bagging, then we have to use <span class="math inline">\(m&lt;p\)</span>. Let’s set <span class="math inline">\(m=3\)</span>.</p>
+<p>Setting <span class="math inline">\(m&lt;p\)</span> allows the random forest to create uncorrelated trees. Typically, this is what is preferred.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># build a random forest model for classification problem</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="co"># use a m smaller than 5</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="co"># mtry = 3</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>rf.pstat <span class="ot">=</span> <span class="fu">randomForest</span>(avgGPA <span class="sc">~</span> ., <span class="at">data=</span>train,</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>                           <span class="at">mtry=</span><span class="dv">3</span>, <span class="at">importance=</span><span class="cn">TRUE</span>)</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>rf.pstat</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+ randomForest(formula = avgGPA ~ ., data = train, mtry = 3, importance = TRUE) 
+               Type of random forest: regression
+                     Number of trees: 500
+No. of variables tried at each split: 3
+
+          Mean of squared residuals: 0.08317912
+                    % Var explained: 70.94</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(rf.pstat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="vignette-bootstrapping_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+<section id="test-set-mse-comparison" class="level3">
+<h3 class="anchored" data-anchor-id="test-set-mse-comparison">Test Set MSE Comparison</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># obtain predictions on testing data</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>yhat.rf <span class="ot">=</span> <span class="fu">predict</span>(rf.pstat, <span class="at">newdata =</span> test)</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="co"># obtain MSE</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>test.rf.err <span class="ot">=</span> <span class="fu">mean</span>((test<span class="sc">$</span>avgGPA <span class="sc">-</span> yhat.rf)<span class="sc">^</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># compare normal random forest model error vs. bagged random forest error</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>test.bag.err</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.1509249</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>test.rf.err</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.1725854</code></pre>
+</div>
+</div>
+<p>Our random forest model achieved a test set MSE of .1509. Compare this value to the test set MSE of our model with bagging.</p>
+<p><strong>Does the random forest model provide any improvement over bootstrapping and bagging, in this case?</strong></p>
+</section>
+</section>
+<section id="finishing-thoughts" class="level2">
+<h2 class="anchored" data-anchor-id="finishing-thoughts">Finishing Thoughts</h2>
+<p>In this case, the random forest model with bagging achieves a better prediction power. However, even if bagging achieves a lower MSE, we would wish to avoid correlation between trees (i.e.&nbsp;correlated predictions) which somewhat invalidates our results.</p>
+<p>Also, for a regression problem like this one, if we wanted to predict trends and create a more powerful predictive model, then we cannot use random forests. Random forests are unable to extrapolate and predict values outside of the trends present in the data given. <span class="math inline">\(^3\)</span></p>
+<p>One way of combating this may be to turn this into a classification problem. You may also consider other more regression-applicable models (regression-enhanced random forest (RERF), SVM regression, deep learning NN, etc.) if you wish to truly extrapolate predictions and discover trends outside of what is present in the data set. <span class="math inline">\(^3\)</span></p>
+</section>
+<section id="resources" class="level2">
+<h2 class="anchored" data-anchor-id="resources">Resources</h2>
+<p><span class="math inline">\(^1\)</span> Random Forests. (n.d.). <em>AFIT Data Science Lab R Programming Guide</em>. Retrieved from <a href="https://afit-r.github.io/random_forests#basic">https://afit-r.github.io/random_forests#basic</a></p>
+<p><span class="math inline">\(^2\)</span> <a href="https://github.com/dailynexusdata/grades-data/tree/main">https://github.com/dailynexusdata/grades-data/tree/main</a></p>
+<p><span class="math inline">\(^3\)</span> Mwiti, D. (2023 Sept 1). Random Forest Regression: When Does It Fail and Why?. Retrieved from <a href="https://neptune.ai/blog/random-forest-regression-when-does-it-fail-and-why">https://neptune.ai/blog/random-forest-regression-when-does-it-fail-and-why</a></p>
 </section>
 
 </main>
