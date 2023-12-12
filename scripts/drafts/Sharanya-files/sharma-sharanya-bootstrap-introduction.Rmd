@@ -34,31 +34,31 @@ Image Reference: Yu, Guo. "Lecture 8: Cross-Validation & Bootstrap", PSTAT-131/2
 sample_list <- list()
 
 # n=1000 bootstrap samples
-for(i in 1:1000){
-   sample_list[[i]] <- sample(c(1:1000), size = 1000, replace = TRUE)
+for(i in 1:10000){
+   sample_list[[i]] <- sample(c(1:10000), size = 10000, replace = TRUE)
 }
 
-head(sample_list)
+# head(sample_list)
 
 ```
 
-The head function prints the first 6 bootstrap samples. We can see that each of these bootstrap samples include 1000 randomly sampled numbers without replacement from the original 1000 observations. The entire sample_list is populated with 1000 samples, where each sample holds 1000 observations.
+The head function prints the first 6 bootstrap samples. We can see that each of these bootstrap samples include 10000 randomly sampled numbers without replacement from the original 1000 observations. The entire sample_list is populated with 10000 samples, where each sample holds 10000 observations.
 
 
 ## Out-Of-Bag Probability
 
 ```{r}
 # select a random number to test ratio of missing observations
-random_num <- sample(c(1:1000), size = 1, replace = TRUE)
+random_num <- sample(c(1:10000), size = 1, replace = TRUE)
 
 # calculating out-of-bag probability 
 count <- 0
-for(i in 1:1000){
+for(i in 1:10000){
   if(random_num %in% unique(sample_list[[i]])){
     count = count + 1
   }
 }
-probability <- 1-(count/1000.0)
+probability <- 1-(count/10000.0)
 
 probability
 ```
