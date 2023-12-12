@@ -1,0 +1,192 @@
+---
+title: "vignette-bootstrapping"
+format: html
+editor: visual
+---
+
+#### Sarah - random forest below
+
+**Objectives:** Understand how bootstrapping works on smaller and larger data sets; Understand what bagging requires of the parameters of a random forest model; Understand the effect of bootstrapping and bagging on tree models (e.g. random forest)
+
+Bagging, or bootstrap aggregating, regression trees increase prediction power of single tree models that have high variance and poor prediction.$^1$ However, bagging regression trees suffer from tree correlation. We can solve this issue be using random forests, which are a modification of bagging that implements a larger set of de-correlated trees.
+
+```{r warning=FALSE, message=FALSE}
+## load necessary packages
+library(dplyr)
+#install.packages("randomForest")
+library(randomForest)
+# install.packages("tree")
+library(gbm)
+library(ISLR)
+library(tree)
+library(tidyverse)
+library(tidymodels)
+library(stringr)
+library(rpart)
+```
+
+Let's examine how bagging affects a prediction problem by implementing bagging and compare to a normal random forest.
+
+## Setup
+
+We will use `courseGrades` data set. This data set includes the number of students receiving each letter grade from Fall 2009 to Summer 2023 at UCSB in wide form.$^2$ We preprocessed previously to extract PSTAT course data.
+
+We choose `avgGPA` as our response variable.
+
+```{r warning=FALSE, message=FALSE}
+# load course grades data set
+grade.raw <- read_csv('data/courseGrades.csv')
+head(grade.raw)
+
+# preprocess
+grade <- grade.raw %>% 
+  filter(nLetterStudents != 0) %>% 
+  select(course, instructor, quarter, year, nLetterStudents, dept, avgGPA) %>%
+  mutate(course = str_replace_all(course, "\\s+", " "))
+
+pstat <- grade %>% 
+  filter(!(quarter == "summer") & dept == "PSTAT" & between(year, 2017, 2022))
+
+pstat <- pstat %>% select(-dept)
+head(pstat)
+```
+
+```{r warning=FALSE, message=FALSE}
+# sample 80% observations as training data
+set.seed(3)
+
+partitions <- pstat %>%
+  initial_split(prop = 0.8)
+
+train <- training(partitions)
+
+test <- testing(partitions)
+
+dim(train)
+dim(test)
+```
+
+*Check the dimensions of your training and testing split before continuing.*
+
+## Bagged Random Forest Model
+
+### Parameter Tuning
+
+Notice how we have 7 variables, one of which is our response variable `avgGPA`. If $p$ is our number of predictors, in this case $p=6$.
+
+Let's begin by training a random forest model with bagging.
+
+**Keep in mind that bagging will lead to correlated trees, since all predictors are considered at each split.**
+
+The `mtry` parameter in `randomForest()` reflects the number of variables randomly sampled as candidates at each split. When implementing a random forest model with bagging, we need to set $m=p$ where $p$ is number of predictors. So, $m=5$, i.e. `mtry=5`. By setting `importance=TRUE`, we will assess independent variable importance in bagged trees.
+
+```{r warning=FALSE, message=FALSE}
+# build a bagging random forest model
+# bagging is random forest with m = p
+
+bag.pstat <- randomForest(avgGPA ~ course + instructor + quarter + year +
+                            nLetterStudents,
+                          data = train,
+                          ntree = 1000,
+                          mtry=5, importance=TRUE, na.action = na.omit)
+bag.pstat
+```
+
+Plot the errors achieved.
+
+```{r warning=FALSE, message=FALSE}
+# plot the errors
+plot(bag.pstat)
+```
+
+*Notice how the error decreases as the number of trees increases, i.e. as our random forest model is further trained.*
+
+### Test Set Error
+
+Let's predict on testing data and retrieve a test set MSE for our bagged random forest model.
+
+```{r warning=FALSE, message=FALSE}
+# predict on testing split based on exact class
+yhat.bag <- predict(bag.pstat, newdata = test, type = "response")
+
+# retrieve test set MSE
+test.bag.err <- mean((test$avgGPA- yhat.bag)^2)
+test.bag.err
+```
+
+Try increasing the `ntree` parameter to 10,000 (i.e. the number of bootstrap samples).
+
+```{r warning=FALSE, message=FALSE}
+# increase ntree
+bag.pstat2 <- randomForest(avgGPA ~ .,
+                            data=train,
+                            mtry=5, ntree=10000, importance=TRUE)
+
+# retrieve test set MSE
+yhat.bag2 <- predict(bag.pstat2, newdata = test)
+test.bag.err2 <- mean((test$avgGPA-yhat.bag)^2)
+test.bag.err2
+```
+
+**Does the number of decision trees affect the test set prediction performance of a bagged random forest model?**
+
+## Unbagged Random Forest
+
+Now let's implement a random forest model on the original training data (no bagging) and retrieve a test set MSE to compare to our previous MSE result.
+
+### Parameter Tuning
+
+If we want a random forest model with no bagging, then we have to use $m<p$. Let's set $m=3$.
+
+Setting $m<p$ allows the random forest to create uncorrelated trees. Typically, this is what is preferred.
+
+```{r warning=FALSE, message=FALSE}
+# build a random forest model for classification problem
+# use a m smaller than 5
+# mtry = 3
+rf.pstat = randomForest(avgGPA ~ ., data=train,
+                        mtry=3, 
+                        ntree = 10000,
+                        importance=TRUE)
+rf.pstat
+```
+
+```{r warning=FALSE, message=FALSE}
+plot(rf.pstat)
+```
+
+### Test Set MSE Comparison
+
+```{r warning=FALSE, message=FALSE}
+# obtain predictions on testing data
+yhat.rf = predict(rf.pstat, newdata = test)
+
+# obtain MSE
+test.rf.err = mean((test$avgGPA - yhat.rf)^2)
+```
+
+```{r warning=FALSE, message=FALSE}
+# compare normal random forest model error vs. bagged random forest error
+test.bag.err
+test.rf.err
+```
+
+Compare the MSE values for bagging versus random forest models.
+
+**Does the random forest model provide any improvement over bagging, in this case?**
+
+## Finishing Thoughts
+
+In this case, the bagging model achieves a better prediction power. However, even if bagging achieves a lower MSE, we would wish to avoid correlation between trees (i.e. correlated predictions) which somewhat invalidates our results.
+
+Also, for a regression problem like this one, if we wanted to predict trends and create a more powerful predictive model, then we cannot use random forests. Random forests are unable to extrapolate and predict values outside of the trends present in the data given. $^3$
+
+One way of combating this may be to turn this into a classification problem. You may also consider other more regression-applicable models (regression-enhanced random forest (RERF), SVM regression, deep learning NN, etc.) if you wish to truly extrapolate predictions and discover trends outside of what is present in the data set. $^3$
+
+## Resources
+
+$^1$ Random Forests. (n.d.). *AFIT Data Science Lab R Programming Guide*. Retrieved from <https://afit-r.github.io/random_forests#basic>
+
+$^2$ <https://github.com/dailynexusdata/grades-data/tree/main>
+
+$^3$ Mwiti, D. (2023 Sept 1). Random Forest Regression: When Does It Fail and Why?. Retrieved from <https://neptune.ai/blog/random-forest-regression-when-does-it-fail-and-why>
