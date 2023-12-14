@@ -405,16 +405,17 @@ Also, for a regression problem like this one, if we wanted to predict trends and
 
 One way of combating this may be to turn this into a classification problem. You may also consider other more regression-applicable models (regression-enhanced random forest (RERF), SVM regression, deep learning NN, etc.) if you wish to truly extrapolate predictions and discover trends outside of what is present in the data set. $^3$
 
-### Ensemble learning
+### More on Ensemble learning and other model variations
+Random forest is a special case of a class of models called ensemble modeling, which is a technique to increase model performance by training and combining output of multiple 'weaker models'. Bootstrapping resampling plays a key role in these models as it allows every model to train on an ample amount of training data(due to sampling replacement). In the case of randomforest, eacb 'tree' is the weak model and the output of random forest is a result of bootstrap aggregation. 
 
-Gradient Boosting Boosting is the upgraded version of bagging(bootstrap aggregation). Rather than training several models from scratch and aggregating the results, each new model is trained based on error from the previous model. In other words, new models introduced is in turned trained by learning the mistakes of previous models. All models are then aggregated to form the final result.
+There are other methods of ensemble learning that extend the idea of bootstrap aggregation: Gradient Boosting. Boosting is the upgraded version of bagging(bootstrap aggregation) in a sense that rather than training several models from scratch and aggregating the results, each new model is trained based on error from the previous model. In other words, new models introduced is in turned trained by learning the mistakes of previous models. All models are then aggregated to form the final result.
 
-A popular algortihm that uses this technique is XGBOOST.
+A popular algortihm that uses this technique is XGBOOST. The techniques explained above are already implemented underthe hood, so utilizing boosting is fairly straight forward.
 
 ```{r}
 pstat <- pstat %>% select(-dept)
 ```
-
+Implementing XGboost in the common tidymodel library is very straight forward., and follows a standard procesior of recipe, workflow, training, and evaluation. 
 ```{r}
 # Step 1: Create Recipe
 recipe <- recipe(avgGPA ~ ., data = stat_classes) %>%
