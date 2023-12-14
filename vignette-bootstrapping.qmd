@@ -14,34 +14,13 @@ Authors: *Sarah Liang, Sharanya Sharma, Dannah Golich, Jason Siu*
 
 In statistics, bootstrapping is a resampling technique that generates many samples from a single sample. Bootstrapping has various applications, like estimating statistic sampling distributions and in machine learning to obtain adequate data for training, testing, and validation data. This vignette will cover the basics of bootstrapping, uses, and applications to machine learning.
 
-### Data Introduction
-
-To explore the capabilities of bootstrapping, we will use a data set containing grades from UC Santa Barbara students for courses offered from Fall 2009 to Summer 2023. More information from this data set can be found [here](https://github.com/dailynexusdata/grades-data/tree/main) at the Daily Nexus' Data Github repository.
-
-We will first load in the preprocessed data, `grade`. We will use various subsets of this data to explore different bootstrapping concepts. The `pstat` data set is a subset of `grade` including GPA information of students in PSTAT classes during the standard school year, excluding summer courses. `pstat171` is also a subset of `grade` containing GPA information for students in PSTAT 171. We will be focused on `avgGPA` as our variable of interest.
-
-```{r}
-grade <- read_csv('data/processedCourseGrades.csv')
-
-# filter by pstat
-pstat <- grade %>% 
-  filter(dept == "PSTAT" & between(year, 2022, 2022))
-
-# obtain pstat courses not including summer
-pstat_not_summer <- pstat %>% filter (!(quarter == "Summer"))
-
-# filter to pstat 171
-pstat171 <- grade %>% 
-  filter(course == "PSTAT 171" & between(year, 2012, 2022))
-```
-
 ### Preliminary Steps
 
 To ensure all functions in this vignette work correctly, we will load in relevant R libraries.
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 library(readr)
-library(imager)
+#library(imager)
 library(dplyr)
 library(randomForest)
 library(randomForest)
@@ -58,11 +37,32 @@ library(ggplot2)
 library(vip)
 ```
 
+### Data Introduction
+
+To explore the capabilities of bootstrapping, we will use a data set containing grades from UC Santa Barbara students for courses offered from Fall 2009 to Summer 2023. More information from this data set can be found [here](https://github.com/dailynexusdata/grades-data/tree/main) at the Daily Nexus' Data Github repository.
+
+We will first load in the preprocessed data, `grade`. We will use various subsets of this data to explore different bootstrapping concepts. The `pstat` data set is a subset of `grade` including GPA information of students in PSTAT classes during the standard school year, excluding summer courses. `pstat171` is also a subset of `grade` containing GPA information for students in PSTAT 171. We will be focused on `avgGPA` as our variable of interest.
+
+```{r warning=FALSE, message=FALSE}
+grade <- read_csv('data/processedCourseGrades.csv')
+
+# filter by pstat
+pstat <- grade %>% 
+  filter(dept == "PSTAT" & between(year, 2022, 2022))
+
+# obtain pstat courses not including summer
+pstat_not_summer <- pstat %>% filter (!(quarter == "Summer"))
+
+# filter to pstat 171
+pstat171 <- grade %>% 
+  filter(course == "PSTAT 171" & between(year, 2012, 2022))
+```
+
 ## Bootstrap Confidence Intervals
 
 The general purpose of bootstrapping is to estimate statistic sampling distributions. From the sampling distributions, we can assess the accuracy of our estimate, like a sample mean. Bootstrapping also requires relatively few assumptions. The main assumption with bootstrapping is that the sample used represents the true population.
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 ggplot(pstat, aes(x = avgGPA)) +
   geom_histogram(binwidth = 0.1, fill = "blue", color = "black", alpha = 0.7) +
   ggtitle("Histogram of Average GPA of Students in PSTAT Classes") +
@@ -74,12 +74,12 @@ The histogram above displays the distribution of GPAs of PSTAT classes from Fall
 
 First, we will calculate a confidence interval without bootstrapping, then perform similar analysis with 1000 bootstrap samples for comparison.
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 # calculate t test without bootstrapping
 print(t.test(pstat$avgGPA)$conf.int)
 ```
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 # create function to calculate the mean of each bootstrap sample
 calculate_mean <- function(x) {
   return(mean(x, na.rm = TRUE))
@@ -99,7 +99,7 @@ bootstrap_resample <- function(data, fun, B = 1000) {
 }
 ```
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 # Extract gpa vector from the data frame
 pstat_gpa <- pstat$avgGPA
 
@@ -121,7 +121,7 @@ As we can see, the bootstrapped confidence interval resulted in a slightly narro
 
 Increasing the number of bootstrap samples can increase the accuracy of the sampling distribution. We will perform the same bootstrap process with 10,000 samples. In performing a bootstrap, one has to consider the computational costs compared to the accuracy one is hoping to achieve. With this data set, the cost of resampling 10,000 times was small due to our small sample size, but computing 1,000 bootstrap samples with a large data set may suffice due to high computational costs.
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 # Number of bootstrap samples
 B <- 10000
 
@@ -143,7 +143,7 @@ hist(bootstrap_means_pstat2, col = "blue", border = "black",
 
 When the sample size is small, constructing a typical confidence interval or even a bootstrap percentile interval may result in an interval that is too narrow.$^1$ We will look at a subset of our data, `pstat171`, for a sample with small n to construct a bootstrap t interval.
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 ggplot(pstat171, aes(x = avgGPA)) +
   geom_histogram(binwidth = 0.1, fill = "blue", color = "black", alpha = 0.7) +
   ggtitle("Histogram of Average GPA of Students in PSTAT 171") +
@@ -153,7 +153,7 @@ ggplot(pstat171, aes(x = avgGPA)) +
 
 Before constructing the bootstrap t interval, we need to define a function to calculate the t statistic of each sample and alter our bootstrap function to store each sample standard error for calculation of the interval.
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 # calculate t statistic
 calculate_t <- function(x) {
   return(t.test(x)$statistic)
@@ -174,12 +174,12 @@ bootstrap_resample_std <- function(data, fun, B = 10000) {
 }
 ```
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 # confidence interval without bootstrapping
 print(t.test(pstat171$avgGPA)$conf.int)
 ```
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 # bootstrap percentile interval
 
 # Bootstrap resampling
@@ -195,11 +195,11 @@ print(confidence_interval_pstat171)
 
 As we can see, the bootstrapped percentile interval is actually smaller than the standard t interval.
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 # bootstrap t interval
 
 # scale the data first
-scaled_pstat171_data <- scale(pstat171_data$avgGPA, scale = FALSE)
+scaled_pstat171_data <- scale(pstat171$avgGPA, scale = FALSE)
 
 # Bootstrap resampling 
 bootstrap_t_pstat171 <- bootstrap_resample_std(scaled_pstat171_data, calculate_t, B)
@@ -226,17 +226,19 @@ In an ideal scenario, statisticians will have an adequate amount of data that ca
 
 ### Bootstrap Diagram
 
-```{r}
+```{r echo=FALSE, include=FALSE, eval=FALSE}
 library(imager)
-bootstrap_diagram <- load.image("/Users/sharanya/Documents/GitHub/vignette-bootstrapping/images/bootstrap-diagram.png")
+bootstrap_diagram <- load.image("/images/bootstrap-diagram.png")
 plot(bootstrap_diagram, axes=FALSE)
 ```
+
+![Bootstrap Sampling Method and Bootstrap Aggregating (Bagging) Concept](images/bootstrap-diagram.png)
 
 In the above example, the dataset only has 3 observations, thus bootstrapping should be used to create a sufficient amount of data for regression. The total dataset of 3 observations is sampled 3 times without replacement to acquire the first bootstrap sample. This process is repeated "B" times to acquire B total bootstrap samples. Each sample is then fit to a statistical model, resulting in B number of models: $\hat{f}^{*1}... \hat{f}^{*B}$. The mini models are then aggregated to form one model. This bootstrap aggregating method is known as Bagging.
 
 ### Bootstrap Sampling Technique
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 # store each bootstrap iteration in a list
 sample_list <- list()# n=10000 bootstrap samples
 for(i in 1:10000){   
@@ -248,7 +250,7 @@ The head function prints the first 6 bootstrap samples. We can see that each of 
 
 ### Out-Of-Bag Probability
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 # select a random number to test ratio of missing observations
 random_num <- sample(c(1:1000), size = 1, replace = TRUE)
 
@@ -270,7 +272,7 @@ Run this code chunk multiple times to see how the probability changes. We can se
 
 **Objectives:** Understand how bootstrapping works on smaller and larger data sets; Understand what bagging requires of the parameters of a random forest model; Understand the effect of bootstrapping and bagging on tree models (e.g. random forest)
 
-Bagging, or bootstrap aggregating, regression trees increase prediction power of single tree models that have high variance and poor prediction.\$\^2\$ However, bagging regression trees suffer from tree correlation. We can solve this issue be using random forests, which are a modification of bagging that implements a larger set of de-correlated trees.
+Bagging, or bootstrap aggregating, regression trees increase prediction power of single tree models that have high variance and poor prediction.$^2$ However, bagging regression trees suffer from tree correlation. We can solve this issue be using random forests, which are a modification of bagging that implements a larger set of de-correlated trees.
 
 Let's examine how bagging affects a prediction problem by implementing bagging and compare to a normal random forest.
 
@@ -416,15 +418,15 @@ There are other methods of ensemble learning that extend the idea of bootstrap a
 
 A popular algorithm that uses this technique is XGBOOST. The techniques explained above are already implemented under the hood, so utilizing boosting is fairly straight forward.
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 pstat <- pstat %>% select(-dept)
 ```
 
 Implementing XGboost in the common tidymodel library is very straight forward., and follows a standard process of recipe, workflow, training, and evaluation.
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 # Step 1: Create Recipe
-recipe <- recipe(avgGPA ~ ., data = stat_classes) %>%
+recipe <- recipe(avgGPA ~ ., data = pstat) %>%
   step_dummy(all_nominal(), one_hot = TRUE)
 
 # Step 2: Create Model Specification
@@ -438,7 +440,7 @@ workflow <- workflow() %>%
   add_model(model_spec)
 
 # Step 4: Split Data
-data_split <- initial_split(stat_classes, prop = 0.8, strata = instructor)
+data_split <- initial_split(pstat, prop = 0.8, strata = instructor)
 train_data <- training(data_split)
 test_data <- testing(data_split)
 
@@ -453,7 +455,7 @@ mse <- mean((predictions$avgGPA - predictions$.pred)^2)
 cat("Mean Squared Error:", mse, "\n")
 ```
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 mse <- mean((predictions$avgGPA - predictions$.pred)^2)
 mae <- mean(abs(predictions$avgGPA - predictions$.pred))
 
@@ -468,7 +470,7 @@ accuracy <- mean(abs(predictions$avgGPA - predictions$.pred) <= threshold)
 cat("Accuracy (within threshold):", accuracy, "\n")
 ```
 
-```{r}
+```{r eval=FALSE, echo=FALSE, include=FALSE}
 # Step 7: Model Interpretability
 # Extract feature importance using the vip package
 feature_importance <- vip(xgb_model)
