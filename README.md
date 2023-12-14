@@ -4,10 +4,9 @@ Vignette on implementing and demonstrating the effects of using bootstrapping an
 
 *Contributors: Sarah Liang, Sharanya Sharma, Dannah Golich, Jason Siu*
 
-Vignette abstract: a brief description in a few sentences of your vignette topic, example data, and outcomes.
+Vignette abstract: This vignette covers the basics of bootstrapping, applications to machine learning, and related resampling methods. A data set containing grade information for UC Santa Barbara students from 2009 to 2023 is used in demonstrating the impacts of bootstrapping on estimating sampling distributions and GPA prediction. 
 
-Repository contents: an explanation of the directory structure of the repository
-
+Repository contents: The completed vignette in qmd and html format can be found at the root directory. The data folder contains both the raw and preprocessed data used in the vignette. The scripts folder includes the preprocessing script, all code for the final vignette, and drafts completed by each contributor. Finally, the images folder contains the images used in our document.
 
 
 ## References
@@ -17,8 +16,3 @@ Random Forests. (n.d.). _AFIT Data Science Lab R Programming Guide_. Retrieved f
 
 What is Bootstrapping?. (n.d.). Retrieved from [https://www.mastersindatascience.org/learning/machine-learning-algorithms/bootstrapping/](https://www.mastersindatascience.org/learning/machine-learning-algorithms/bootstrapping/)
 
-
-1.  A brief .README summarizing repo content and listing the best references on your topic for a user to consult after reviewing your vignette if they wish to learn more
-2.  A primary vignette document that explains methods and walks through implementation line-by-line (similar to an in-class or lab activity)
-3.  At least one example dataset
-4.  A script containing commented codes appearing in the vignette
