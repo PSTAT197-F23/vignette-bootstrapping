@@ -12,7 +12,13 @@ Repository contents: The completed vignette in qmd and html format can be found 
 ## References
 Biswal, A. (2023, Aug 10). Bagging in Machine Learning: Step to Perform And Its Advantages. Retrieved from [https://www.simplilearn.com/tutorials/machine-learning-tutorial/bagging-in-machine-learning](https://www.simplilearn.com/tutorials/machine-learning-tutorial/bagging-in-machine-learning)
 
+Mwiti, D. (2023 Sept 1). Random Forest Regression: When Does It Fail and Why?. Retrieved from <https://neptune.ai/blog/random-forest-regression-when-does-it-fail-and-why>
+
 Random Forests. (n.d.). _AFIT Data Science Lab R Programming Guide_. Retrieved from [https://afit-r.github.io/random_forests#basic](https://afit-r.github.io/random_forests#basic)
 
+Tim C. "What Teachers Should Know About the Bootstrap: Resampling in the Undergraduate Statistics Curriculum." The American Statistician, vol. 69, no. 4, 2015, pp. 371--86, [https://doi.org/10.1080/00031305.2015.1089789.](https://doi.org/10.1080/00031305.2015.1089789.https://garstats.wordpress.com/2019/07/25/boott/)
+
 What is Bootstrapping?. (n.d.). Retrieved from [https://www.mastersindatascience.org/learning/machine-learning-algorithms/bootstrapping/](https://www.mastersindatascience.org/learning/machine-learning-algorithms/bootstrapping/)
+
+Yu, Guo. "Lecture 8: Cross-Validation & Bootstrap", PSTAT-131/231: Introduction to Statistical Machine Learning, Oct.26, 2023, UC Santa Barbara.
 
